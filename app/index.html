@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Note Vase — a beautiful, fast, and private notes app with markdown, tags, pinning, reminders and more. 100% offline." />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Note Vase — A beautiful place for your thoughts</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Patrick+Hand&family=Kalam:wght@300;400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📝%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+    <!-- Top Navigation -->
+    <header class="topbar">
+        <div class="brand">
+            <div class="logo" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="9" y1="13" x2="15" y2="13"/>
+                    <line x1="9" y1="17" x2="13" y2="17"/>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <strong>Note Vase</strong>
+                <span class="tagline">A beautiful place for your thoughts</span>
+            </div>
+        </div>
+
+        <div class="search-wrap">
+            <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input id="searchInput" type="search" placeholder="Search title, content, or #tag…" autocomplete="off" aria-label="Search notes" />
+            <kbd class="kbd" aria-hidden="true">/</kbd>
+        </div>
+
+        <div class="topbar-actions">
+            <button id="exportBtn" class="icon-btn" title="Export notes (JSON)" aria-label="Export notes">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
+            <button id="importBtn" class="icon-btn" title="Import notes (JSON)" aria-label="Import notes">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </button>
+            <input id="importFile" type="file" accept="application/json" hidden />
+            <button id="themeToggle" class="icon-btn" title="Toggle theme" aria-label="Toggle dark mode">
+                <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="main">
+        <!-- Sidebar / Filters -->
+        <aside class="sidebar">
+            <button id="newNoteBtn" class="btn btn-primary btn-block">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New note
+                <kbd class="kbd kbd-light">N</kbd>
+            </button>
+
+            <nav class="filters" aria-label="Filters">
+                <button class="filter-btn is-active" data-filter="all">
+                    <span class="dot"></span> All notes
+                    <span class="count" id="countAll">0</span>
+                </button>
+                <button class="filter-btn" data-filter="pinned">
+                    <span class="dot dot-amber"></span> Pinned
+                    <span class="count" id="countPinned">0</span>
+                </button>
+                <button class="filter-btn" data-filter="archived">
+                    <span class="dot dot-slate"></span> Archived
+                    <span class="count" id="countArchived">0</span>
+                </button>
+                <button class="filter-btn" data-filter="trash">
+                    <span class="dot dot-rose"></span> Trash
+                    <span class="count" id="countTrash">0</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">Tags</div>
+                <div id="tagsList" class="tags-list" aria-live="polite"></div>
+            </div>
+
+            <div class="sidebar-section sidebar-stats">
+                <div class="sidebar-title">Stats</div>
+                <div class="stat-row"><span>Total</span><strong id="statTotal">0</strong></div>
+                <div class="stat-row"><span>Words</span><strong id="statWords">0</strong></div>
+                <div class="stat-row"><span>Storage</span><strong id="statStorage">0 KB</strong></div>
+            </div>
+
+            <footer class="sidebar-footer">
+                <span>Built by</span>
+                <a href="https://github.com/Jateen-yadav" target="_blank" rel="noopener">Jateen Yadav</a>
+            </footer>
+        </aside>
+
+        <!-- Notes area -->
+        <section class="content">
+            <div class="content-header">
+                <h1 id="viewTitle">All notes</h1>
+                <div class="view-tools">
+                    <button id="emptyTrashBtn" class="btn btn-ghost-danger hidden" title="Permanently delete all trashed notes">Empty Trash</button>
+                    <div class="seg" role="tablist" aria-label="Sort">
+                        <button class="seg-btn is-active" data-sort="updated">Updated</button>
+                        <button class="seg-btn" data-sort="created">Created</button>
+                        <button class="seg-btn" data-sort="alpha">A–Z</button>
+                    </div>
+                    <div class="seg" role="tablist" aria-label="Layout">
+                        <button id="viewGrid" class="seg-btn is-active" title="Grid view" aria-label="Grid view">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        </button>
+                        <button id="viewList" class="seg-btn" title="List view" aria-label="List view">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="notesGrid" class="notes-grid" aria-live="polite"></div>
+
+            <div id="emptyState" class="empty-state hidden">
+                <div class="empty-icon">📝</div>
+                <h2>Nothing here yet</h2>
+                <p>Press <kbd class="kbd">N</kbd> or click <strong>New note</strong> to capture your first thought.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Editor Modal -->
+    <div id="editorOverlay" class="overlay hidden" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
+            <header class="modal-head">
+                <input id="noteTitle" class="title-input" placeholder="Title" maxlength="200" />
+                <div class="modal-tools">
+                    <div class="color-swatches" role="group" aria-label="Note color">
+                        <button class="swatch" data-color="default" style="--c:transparent" title="Default"></button>
+                        <button class="swatch" data-color="amber"   style="--c:#f59e0b" title="Amber"></button>
+                        <button class="swatch" data-color="rose"    style="--c:#f43f5e" title="Rose"></button>
+                        <button class="swatch" data-color="emerald" style="--c:#10b981" title="Emerald"></button>
+                        <button class="swatch" data-color="sky"     style="--c:#0ea5e9" title="Sky"></button>
+                        <button class="swatch" data-color="violet"  style="--c:#8b5cf6" title="Violet"></button>
+                    </div>
+                    <button id="pinBtn" class="icon-btn" title="Pin note (P)" aria-label="Pin">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14l-1.4-2.8a4 4 0 0 1-.6-2.1V8a5 5 0 0 0-10 0v4.1a4 4 0 0 1-.6 2.1L5 17z"/></svg>
+                    </button>
+                    <button id="closeEditor" class="icon-btn" title="Close (Esc)" aria-label="Close editor">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+            </header>
+
+            <div class="editor-toolbar">
+                <button class="tb-btn" data-md="bold" title="Bold (Ctrl/Cmd+B)"><strong>B</strong></button>
+                <button class="tb-btn" data-md="italic" title="Italic (Ctrl/Cmd+I)"><em>I</em></button>
+                <button class="tb-btn" data-md="strike" title="Strikethrough"><s>S</s></button>
+                <span class="tb-sep"></span>
+                <button class="tb-btn" data-md="h1" title="Heading 1">H1</button>
+                <button class="tb-btn" data-md="h2" title="Heading 2">H2</button>
+                <button class="tb-btn" data-md="quote" title="Quote">❝</button>
+                <button class="tb-btn" data-md="ul" title="Bulleted list">•</button>
+                <button class="tb-btn" data-md="ol" title="Numbered list">1.</button>
+                <button class="tb-btn" data-md="task" title="Task list">☐</button>
+                <button class="tb-btn" data-md="code" title="Inline code">{ }</button>
+                <button class="tb-btn" data-md="link" title="Link">🔗</button>
+                <span class="tb-sep"></span>
+                <button id="togglePreview" class="tb-btn tb-toggle" title="Toggle preview (Ctrl/Cmd+E)">Preview</button>
+            </div>
+
+            <div class="editor-body">
+                <textarea id="noteContent" class="note-textarea" placeholder="Start writing… Markdown is supported." spellcheck="true"></textarea>
+                <div id="notePreview" class="note-preview hidden" aria-live="polite"></div>
+            </div>
+
+            <footer class="modal-foot">
+                <input id="noteTags" class="tags-input" placeholder="Add tags separated by commas (e.g. ideas, work, todo)" />
+                <div class="modal-meta">
+                    <span id="noteStats" class="muted"></span>
+                    <button id="deleteBtn" class="btn btn-ghost-danger">Delete</button>
+                    <button id="saveBtn" class="btn btn-primary">Save <kbd class="kbd kbd-light">⌘S</kbd></button>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+    <!-- Confirmation modal -->
+    <div id="confirmOverlay" class="overlay hidden" aria-hidden="true">
+        <div class="modal modal-sm" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+            <h3 id="confirmTitle">Are you sure?</h3>
+            <p id="confirmMessage" class="muted">This action cannot be undone.</p>
+            <div class="confirm-actions">
+                <button id="confirmCancel" class="btn btn-ghost">Cancel</button>
+                <button id="confirmOk" class="btn btn-danger">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help / Shortcuts -->
+    <div id="helpOverlay" class="overlay hidden" aria-hidden="true">
+        <div class="modal modal-sm" role="dialog" aria-modal="true">
+            <header class="modal-head">
+                <h3 style="margin:0">Keyboard shortcuts</h3>
+                <button id="closeHelp" class="icon-btn" aria-label="Close">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </header>
+            <ul class="shortcut-list">
+                <li><span>New note</span><kbd class="kbd">N</kbd></li>
+                <li><span>Search</span><kbd class="kbd">/</kbd></li>
+                <li><span>Save note</span><kbd class="kbd">⌘/Ctrl + S</kbd></li>
+                <li><span>Toggle preview</span><kbd class="kbd">⌘/Ctrl + E</kbd></li>
+                <li><span>Pin / Unpin</span><kbd class="kbd">P</kbd></li>
+                <li><span>Toggle theme</span><kbd class="kbd">T</kbd></li>
+                <li><span>Show this help</span><kbd class="kbd">?</kbd></li>
+                <li><span>Close dialogs</span><kbd class="kbd">Esc</kbd></li>
+            </ul>
+        </div>
+    </div>
+
+    <button id="helpBtn" class="fab" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+
+    <script src="js/app.js" defer></script>
+</body>
+</html>
