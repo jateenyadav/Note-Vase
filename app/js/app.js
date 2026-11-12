@@ -365,7 +365,7 @@
             const color = NOTE_COLORS.includes(n.color) ? n.color : "default";
             const pinIndicator = n.pinned && !n.trashed ? `
                 <span class="note-card-pin" title="Pinned" aria-label="Pinned">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M14 4l6 6-3 1-4 4-1 5-2-2-4 4-1-1 4-4-2-2 5-1 4-4 1-3 -3z" transform="rotate(-15 12 12)"/></svg>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M14 4l6 6-3 1-4 4-1 5-2-2-4 4-1-1 4-4-2-2 5-1 4-4 1-3z" transform="rotate(-15 12 12)"/></svg>
                 </span>` : "";
             return `
                 <article class="note-card ${pinned} ${trashed}" data-id="${escapeHtml(n.id)}" data-color="${color}" tabindex="0">
