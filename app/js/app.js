@@ -62,6 +62,44 @@
 
     const wordCount = (s = "") => (s.trim() ? s.trim().split(/\s+/).length : 0);
 
+    /* ------------------------- Note validation ------------------------- */
+    // Notes can come from an import file or from localStorage, so never trust their shape.
+    const NOTE_COLORS = ["default", "amber", "rose", "emerald", "sky", "violet", "green", "slate"];
+    const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+    const IMPORT_LIMITS = { fileBytes: 5 * 1024 * 1024, notes: 5000, title: 500, content: 100000 };
+
+    const cleanTime = (v, fallback) => {
+        const n = Number(v);
+        return Number.isFinite(n) && n > 0 && n < 8.64e15 ? n : fallback;
+    };
+
+    // strict = true for imports: apply size limits and the editor's tag rules.
+    const sanitizeNote = (raw, strict = false) => {
+        if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+        const now = Date.now();
+        let title = typeof raw.title === "string" ? raw.title : "";
+        let content = typeof raw.content === "string" ? raw.content : "";
+        let tags = Array.isArray(raw.tags) ? raw.tags.filter(t => typeof t === "string") : [];
+        if (strict) {
+            title = title.slice(0, IMPORT_LIMITS.title);
+            content = content.slice(0, IMPORT_LIMITS.content);
+            tags = parseTagsInput(tags.join(","));
+        }
+        const createdAt = cleanTime(raw.createdAt, now);
+        return {
+            id: typeof raw.id === "string" && SAFE_ID.test(raw.id) ? raw.id : uid(),
+            title,
+            content,
+            tags,
+            color: NOTE_COLORS.includes(raw.color) ? raw.color : "default",
+            pinned: raw.pinned === true,
+            archived: raw.archived === true,
+            trashed: raw.trashed === true,
+            createdAt,
+            updatedAt: cleanTime(raw.updatedAt, createdAt)
+        };
+    };
+
     const debounce = (fn, ms = 250) => {
         let t;
         return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
@@ -71,7 +109,10 @@
     const loadNotes = () => {
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) return JSON.parse(raw);
+            if (raw) {
+                const arr = JSON.parse(raw);
+                return Array.isArray(arr) ? arr.map(n => sanitizeNote(n)).filter(Boolean) : [];
+            }
         } catch (e) { console.warn("loadNotes failed", e); }
         // migrate legacy: array of plain strings
         try {
@@ -321,13 +362,13 @@
                 `<span class="note-card-tag">#${escapeHtml(t)}</span>`).join("");
             const pinned = n.pinned ? "is-pinned" : "";
             const trashed = n.trashed ? "is-trashed" : "";
-            const color = escapeHtml(n.color || "default");
+            const color = NOTE_COLORS.includes(n.color) ? n.color : "default";
             const pinIndicator = n.pinned && !n.trashed ? `
                 <span class="note-card-pin" title="Pinned" aria-label="Pinned">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M14 4l6 6-3 1-4 4-1 5-2-2-4 4-1-1 4-4-2-2 5-1 4-4 1-3 -3z" transform="rotate(-15 12 12)"/></svg>
                 </span>` : "";
             return `
-                <article class="note-card ${pinned} ${trashed}" data-id="${n.id}" data-color="${color}" tabindex="0">
+                <article class="note-card ${pinned} ${trashed}" data-id="${escapeHtml(n.id)}" data-color="${color}" tabindex="0">
                     <header class="note-card-head">
                         <h3 class="note-card-title">${escapeHtml(n.title || "Untitled")}</h3>
                         ${pinIndicator}
@@ -355,7 +396,7 @@
                     <div class="note-card-body">${bodyHtml}</div>
                     <footer class="note-card-foot">
                         <div class="note-card-tags">${tagsHtml}</div>
-                        <span class="note-card-date" title="${new Date(n.updatedAt).toLocaleString()}">${formatDate(n.updatedAt)}</span>
+                        <span class="note-card-date" title="${escapeHtml(new Date(n.updatedAt).toLocaleString())}">${escapeHtml(formatDate(n.updatedAt))}</span>
                     </footer>
                 </article>
             `;
@@ -661,36 +702,31 @@
 
     const importNotes = async (file) => {
         if (!file) return;
+        if (file.size > IMPORT_LIMITS.fileBytes) { toast("File is too large (max 5 MB)"); return; }
         try {
             const text = await file.text();
-            const data = JSON.parse(text);
-            const incoming = Array.isArray(data) ? data : Array.isArray(data.notes) ? data.notes : null;
+            let data;
+            try { data = JSON.parse(text); } catch (e) { toast("Invalid file"); return; }
+            const incoming = Array.isArray(data) ? data
+                : data && typeof data === "object" && Array.isArray(data.notes) ? data.notes : null;
             if (!incoming) { toast("Invalid file"); return; }
+            if (incoming.length > IMPORT_LIMITS.notes) { toast(`Too many notes (max ${IMPORT_LIMITS.notes})`); return; }
+            const valid = incoming
+                .map(raw => sanitizeNote(raw, true))
+                .filter(n => n && (n.title.trim() || n.content.trim() || n.tags.length));
+            if (!valid.length) { toast("No notes found in file"); return; }
             const ok = await confirmAction({
-                title: `Import ${incoming.length} note${incoming.length === 1 ? "" : "s"}?`,
+                title: `Import ${valid.length} note${valid.length === 1 ? "" : "s"}?`,
                 body: "Existing notes will be kept. Duplicates by ID are skipped."
             });
             if (!ok) return;
             const known = new Set(notes.map(n => n.id));
             let added = 0;
-            incoming.forEach(raw => {
-                if (!raw || typeof raw !== "object") return;
-                const id = raw.id && !known.has(raw.id) ? raw.id : uid();
+            valid.forEach(note => {
+                const id = !known.has(note.id) ? note.id : uid();
                 if (known.has(id)) return;
                 known.add(id);
-                const now = Date.now();
-                notes.push({
-                    id,
-                    title: String(raw.title || "").slice(0, 500),
-                    content: String(raw.content || ""),
-                    tags: Array.isArray(raw.tags) ? raw.tags.filter(t => typeof t === "string").slice(0, 20) : [],
-                    color: typeof raw.color === "string" ? raw.color : "default",
-                    pinned: Boolean(raw.pinned),
-                    archived: Boolean(raw.archived),
-                    trashed: Boolean(raw.trashed),
-                    createdAt: Number(raw.createdAt) || now,
-                    updatedAt: Number(raw.updatedAt) || now
-                });
+                notes.push({ ...note, id });
                 added++;
             });
             saveNotes();
